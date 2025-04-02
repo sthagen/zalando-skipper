@@ -1,9 +1,11 @@
 package auth
 
 import (
+	"net/http"
+	"os"
+
 	auth "github.com/abbot/go-http-auth"
 	"github.com/zalando/skipper/filters"
-	"net/http"
 )
 
 const (
@@ -31,6 +33,14 @@ func (a *basic) Response(filters.FilterContext) {}
 
 // check basic auth
 func (a *basic) Request(ctx filters.FilterContext) {
+	if a.authenticator == nil {
+		ctx.Serve(&http.Response{
+			StatusCode: http.StatusUnauthorized,
+			Header:     http.Header{},
+		})
+		return
+	}
+
 	username := a.authenticator.CheckAuth(ctx.Request())
 
 	if username == "" {
@@ -63,6 +73,13 @@ func (spec *basicSpec) CreateFilter(config []interface{}) (filters.Filter, error
 		if definedName, ok := config[1].(string); ok {
 			realmName = definedName
 		}
+	}
+
+	if _, err := os.Stat(configFile); err != nil {
+		return &basic{
+			authenticator:   nil,
+			realmDefinition: ForceBasicAuthHeaderValue + `"` + realmName + `"`,
+		}, nil
 	}
 
 	htpasswd := auth.HtpasswdFileProvider(configFile)
