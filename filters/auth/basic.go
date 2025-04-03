@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	auth "github.com/abbot/go-http-auth"
 	"github.com/zalando/skipper/filters"
@@ -36,6 +38,7 @@ func (a *basic) Request(ctx filters.FilterContext) {
 	if a.authenticator == nil {
 		ctx.Serve(&http.Response{
 			StatusCode: http.StatusUnauthorized,
+			Body:       io.NopCloser(strings.NewReader("missing credential file")),
 			Header:     http.Header{},
 		})
 		return
